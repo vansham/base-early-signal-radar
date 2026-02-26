@@ -8,7 +8,6 @@ import TrackButton from './TrackButton'
 import AlertButton from './AlertButton'
 
 async function runAdvancedRiskProof(_item: RadarItem): Promise<void> {
-  import { appendBuilderCode } from '@/lib/builderCode'
   // TODO: Connect CDP wallet
   // TODO: Append Builder Code: appendBuilderCode(calldata, process.env.NEXT_PUBLIC_BUILDER_CODE!)
   // TODO: Execute onchain verification (~$0.02 USDC on Base)
