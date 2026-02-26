@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 
-export default function TrackButton({ pairId, pair }: { pairId: string; pair: string }) {
+export default function TrackButton({ pairId, pair: _pair }: { pairId: string; pair: string }) {
   const key = `tracked_${pairId}`
   const [tracked, setTracked] = useState(() => typeof window !== 'undefined' ? localStorage.getItem(key) === 'true' : false)
   const toggle = () => { const next = !tracked; setTracked(next); localStorage.setItem(key, String(next)) }
