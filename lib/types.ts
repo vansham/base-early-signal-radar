@@ -8,6 +8,10 @@ export type AnomalyType =
   | 'WHALE_ENTRY'
   | 'RAPID_MINT'
 
+export type DexName = 'Uniswap V3' | 'Aerodrome' | 'BaseSwap' | 'SushiSwap' | 'Curve' | 'Unknown DEX' | string
+
+export type DeployerSignal = 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL'
+
 export interface RadarItem {
   id: string
   pair: string
@@ -16,7 +20,7 @@ export interface RadarItem {
   liquidity: number
   volume24h: number
   ageMinutes: number
-  dex: string
+  dex: DexName
   deployer: string
   isKnownDeployer: boolean
   anomalyType: AnomalyType
@@ -31,9 +35,53 @@ export interface RadarItem {
 export interface RiskScoreInput {
   liquidity: number
   ageMinutes: number
-  dex: string
+  dex: DexName
   isKnownDeployer: boolean
   contractVerified: boolean
   txCount: number
   priceChange1h: number
+}
+
+export interface RiskBreakdown {
+  liquiditySignal: DeployerSignal
+  ageSignal: DeployerSignal
+  dexSignal: DeployerSignal
+  deployerSignal: DeployerSignal
+  contractSignal: DeployerSignal
+  priceSignal: DeployerSignal
+}
+
+export interface RiskScoreResult {
+  score: number
+  level: RiskLevel
+  breakdown: RiskBreakdown
+}
+
+export interface RadarApiResponse {
+  success: boolean
+  count: number
+  timestamp: number
+  data: RadarItem[]
+}
+
+export interface RiskApiResponse {
+  success: boolean
+  score: number
+  level: RiskLevel
+  breakdown: RiskBreakdown
+}
+
+export interface AlertSubscription {
+  id: string
+  pairId: string
+  pair: string
+  createdAt: number
+}
+
+export interface StatsSummary {
+  high: number
+  medium: number
+  low: number
+  totalLiquidity: number
+  totalVolume: number
 }
