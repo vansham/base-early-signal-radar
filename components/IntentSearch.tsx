@@ -1,17 +1,62 @@
 'use client'
 
-export default function IntentSearch({ value, onChange, resultCount }: { value: string; onChange: (v: string) => void; resultCount: number }) {
+const TAGS = [
+  { label: 'NEW POOL', query: 'new_pool' },
+  { label: 'WHALE', query: 'whale_entry' },
+  { label: 'USDC', query: 'USDC' },
+  { label: 'UNISWAP', query: 'Uniswap' },
+  { label: 'HIGH RISK', query: 'high risk' },
+  { label: 'VOLUME', query: 'unusual_volume' },
+]
+
+export default function IntentSearch({ value, onChange, resultCount }: {
+  value: string
+  onChange: (v: string) => void
+  resultCount: number
+}) {
   return (
-    <div style={{ position: 'relative', marginBottom: 32 }}>
-      <div style={{ position: 'relative', background: 'rgba(15,22,36,0.9)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 10, overflow: 'hidden' }}>
-        <span style={{ position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: '#3b82f6', opacity: 0.7 }}>⌕</span>
-        <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder="What do you want to explore on Base? e.g. new pools, whale activity, USDC pairs..." style={{ width: '100%', padding: '16px 120px 16px 48px', background: 'transparent', border: 'none', outline: 'none', color: '#f1f5f9', fontSize: 14, fontFamily: 'monospace' }} />
-        <span style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#475569', fontFamily: 'monospace' }}>{resultCount} SIGNALS</span>
+    <div style={{ position: 'relative', marginBottom: 24 }}>
+      <div style={{ position: 'relative', background: 'rgba(6,13,20,0.95)', border: '1px solid rgba(0,200,255,0.15)', borderRadius: 8, overflow: 'hidden' }}>
+        <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: '#00c8ff', opacity: 0.6 }}>⌕</span>
+        <input
+          type="text"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="What do you want to explore on Base? e.g. new pools, whale activity, USDC pairs..."
+          style={{ width: '100%', padding: '14px 110px 14px 44px', background: 'transparent', border: 'none', outline: 'none', color: '#e8f4ff', fontSize: 13, fontFamily: 'Space Mono, monospace' }}
+        />
+        {value && (
+          <button
+            onClick={() => onChange('')}
+            style={{ position: 'absolute', right: 90, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#4a6a80', fontSize: 14, cursor: 'pointer' }}
+          >✕</button>
+        )}
+        <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: '#2a4a60', fontFamily: 'Space Mono, monospace', letterSpacing: '0.1em' }}>
+          {resultCount} SIGNALS
+        </span>
       </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-        {['new pool', 'whale', 'USDC', 'Uniswap', 'high risk', 'volume'].map(tag => (
-          <button key={tag} onClick={() => onChange(value === tag ? '' : tag)} style={{ padding: '4px 12px', borderRadius: 4, border: `1px solid ${value === tag ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.08)'}`, background: value === tag ? 'rgba(59,130,246,0.1)' : 'transparent', color: value === tag ? '#93c5fd' : '#475569', fontSize: 10, fontFamily: 'monospace', cursor: 'pointer', letterSpacing: '0.05em', fontWeight: 600, textTransform: 'uppercase' }}>{tag}</button>
-        ))}
+
+      <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+        {TAGS.map(tag => {
+          const active = value === tag.query
+          return (
+            <button
+              key={tag.label}
+              onClick={() => onChange(active ? '' : tag.query)}
+              style={{
+                padding: '4px 12px', borderRadius: 3,
+                border: `1px solid ${active ? 'rgba(0,200,255,0.4)' : 'rgba(0,200,255,0.1)'}`,
+                background: active ? 'rgba(0,200,255,0.1)' : 'transparent',
+                color: active ? '#00c8ff' : '#3a5a70',
+                fontSize: 9, fontFamily: 'Space Mono, monospace',
+                cursor: 'pointer', letterSpacing: '0.12em', fontWeight: 700,
+                transition: 'all 0.15s',
+              }}
+            >
+              {tag.label}
+            </button>
+          )
+        })}
       </div>
     </div>
   )

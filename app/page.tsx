@@ -146,7 +146,7 @@ export default function HomePage() {
 
   const filtered = useMemo(() => items.filter(item => {
     const q = query.toLowerCase()
-    const mq = !q || item.pair.toLowerCase().includes(q) || item.dex.toLowerCase().includes(q) || item.anomalyType.toLowerCase().includes(q.replace(' ', '_'))
+    const mq = !q || item.pair.toLowerCase().includes(q.toLowerCase()) || item.dex.toLowerCase().includes(q.toLowerCase()) || item.anomalyType.toLowerCase().includes(q.toLowerCase()) || (q === "high risk" && item.riskLevel === "HIGH") || (q === "low risk" && item.riskLevel === "LOW") || (q === "unusual_volume" && item.anomalyType === "UNUSUAL_VOLUME") || (q === "whale_entry" && item.anomalyType === "WHALE_ENTRY") || (q === "new_pool" && item.anomalyType === "NEW_POOL")
     const mf = filter === 'all' || item.riskLevel.toLowerCase() === filter
     return mq && mf
   }), [items, query, filter])
