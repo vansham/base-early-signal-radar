@@ -1,5 +1,5 @@
-import ProofModal from "@/components/ProofModal"
 'use client'
+import ProofModal from "@/components/ProofModal"
 import { useState, useEffect, useMemo } from 'react'
 import { RadarItem } from '@/lib/types'
 import { detectAnomalies, getAnomalyLabel } from '@/lib/anomaly'
@@ -125,110 +125,6 @@ function Card({ item, onProof }: { item: RadarItem; onProof: (item: RadarItem) =
   )
 }
 
-// ProofModal moved to component({ item, onClose }: { item: RadarItem; onClose: () => void }) {
-  const [step, setStep] = useState<ProofStep>('idle')
-  const [wallet, setWallet] = useState('')
-
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
-  }, [])
-
-  const connect = async (w: string) => {
-    setWallet(w); setStep('connecting')
-    await new Promise(r => setTimeout(r, 1500))
-    setStep('connected')
-  }
-
-  const verify = async () => {
-    setStep('verifying')
-    await new Promise(r => setTimeout(r, 2000))
-    setStep('done')
-    // TODO: Real onchain call + Builder Code append
-  }
-
-  return (
-    <div
-      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999, background: 'rgba(2,5,8,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
-      onClick={onClose}
-    >
-      <div
-        style={{ background: '#07101a', border: '1px solid rgba(255,184,0,0.25)', borderRadius: 10, padding: 28, maxWidth: 460, width: '100%', position: 'relative' }}
-        onClick={e => e.stopPropagation()}
-      >
-        <button onClick={onClose} style={{ position: 'absolute', top: 14, right: 14, background: 'none', border: 'none', color: '#4a6a80', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>✕</button>
-
-        <div style={{ fontSize: 8, color: '#ffb800', fontFamily: 'Space Mono, monospace', letterSpacing: '0.2em', marginBottom: 10 }}>◆ PREMIUM ONCHAIN FEATURE</div>
-        <h3 style={{ fontSize: 20, fontWeight: 800, color: '#e8f4ff', marginBottom: 8, fontFamily: 'Syne, sans-serif' }}>🛡️ Advanced Risk Proof</h3>
-        <p style={{ fontSize: 11, color: '#4a6a80', lineHeight: 1.7, marginBottom: 18, fontFamily: 'Space Mono, monospace' }}>
-          Onchain verification of <strong style={{ color: '#e8f4ff' }}>{item.pair}</strong> — contract bytecode, deployer history, honeypot check, LP lock status.
-        </p>
-
-        <div style={{ background: 'rgba(255,184,0,0.05)', border: '1px solid rgba(255,184,0,0.15)', borderRadius: 6, padding: '12px 16px', marginBottom: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: 9, color: '#ffb800', fontFamily: 'Space Mono, monospace', letterSpacing: '0.1em', marginBottom: 4 }}>ESTIMATED COST</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: '#e8f4ff', fontFamily: 'Syne, sans-serif' }}>~$0.02 <span style={{ fontSize: 11, color: '#4a6a80', fontFamily: 'Space Mono, monospace' }}>USDC</span></div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 8, color: '#2a4a60', fontFamily: 'Space Mono, monospace', marginBottom: 4 }}>NETWORK</div>
-            <div style={{ fontSize: 11, color: '#00c8ff', fontFamily: 'Space Mono, monospace', fontWeight: 700 }}>BASE MAINNET</div>
-          </div>
-        </div>
-
-        {/* Steps */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-          {[
-            { n: '01', label: 'Connect Wallet', done: ['connected','verifying','done'].includes(step) },
-            { n: '02', label: 'Approve ~$0.02 USDC', done: ['verifying','done'].includes(step) },
-            { n: '03', label: 'Onchain Verification', done: step === 'done' },
-          ].map(s => (
-            <div key={s.n} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: s.done ? 'rgba(0,229,160,0.05)' : 'rgba(255,255,255,0.02)', border: `1px solid ${s.done ? 'rgba(0,229,160,0.2)' : 'rgba(0,200,255,0.06)'}`, borderRadius: 4 }}>
-              <div style={{ width: 22, height: 22, borderRadius: '50%', background: s.done ? '#00e5a0' : 'rgba(0,200,255,0.06)', border: `1px solid ${s.done ? '#00e5a0' : 'rgba(0,200,255,0.12)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: 8, color: s.done ? '#020508' : '#3a5a70', fontFamily: 'Space Mono, monospace', fontWeight: 700 }}>{s.done ? '✓' : s.n}</span>
-              </div>
-              <span style={{ fontSize: 11, color: s.done ? '#00e5a0' : '#4a6a80', fontFamily: 'Space Mono, monospace' }}>{s.label}</span>
-              {s.done && wallet && s.n === '01' && <span style={{ marginLeft: 'auto', fontSize: 9, color: '#3a5a70', fontFamily: 'Space Mono, monospace' }}>{wallet}</span>}
-            </div>
-          ))}
-        </div>
-
-        {/* Status */}
-        {step === 'connecting' && <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(0,200,255,0.04)', border: '1px solid rgba(0,200,255,0.12)', borderRadius: 5, display: 'flex', gap: 10, alignItems: 'center' }}><span style={{ fontSize: 15, color: '#00c8ff', animation: 'spin 1s linear infinite', display: 'inline-block' }}>◌</span><span style={{ fontSize: 10, color: '#00c8ff', fontFamily: 'Space Mono, monospace' }}>CONNECTING TO {wallet.toUpperCase()}...</span></div>}
-        {step === 'verifying' && <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(255,184,0,0.04)', border: '1px solid rgba(255,184,0,0.15)', borderRadius: 5, display: 'flex', gap: 10, alignItems: 'center' }}><span style={{ fontSize: 15, color: '#ffb800', animation: 'spin 1s linear infinite', display: 'inline-block' }}>◌</span><span style={{ fontSize: 10, color: '#ffb800', fontFamily: 'Space Mono, monospace' }}>VERIFYING ONCHAIN · PLEASE CONFIRM IN WALLET...</span></div>}
-        {step === 'done' && <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(0,229,160,0.06)', border: '1px solid rgba(0,229,160,0.25)', borderRadius: 5 }}><span style={{ fontSize: 11, color: '#00e5a0', fontFamily: 'Space Mono, monospace', fontWeight: 700 }}>✓ VERIFICATION COMPLETE — Builder Code bc_cpho8un9 attached!</span></div>}
-
-        {/* Actions */}
-        {step === 'idle' && (
-          <>
-            <div style={{ fontSize: 9, color: '#3a5a70', fontFamily: 'Space Mono, monospace', letterSpacing: '0.1em', marginBottom: 10 }}>SELECT WALLET</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
-              {['MetaMask', 'Coinbase Wallet', 'WalletConnect', 'Rabby Wallet'].map(w => (
-                <button key={w} onClick={() => connect(w)} style={{ padding: '12px', borderRadius: 5, border: '1px solid rgba(0,200,255,0.15)', background: 'rgba(0,200,255,0.04)', color: '#7ab8d0', fontSize: 11, fontFamily: 'Space Mono, monospace', cursor: 'pointer', fontWeight: 700, transition: 'all 0.15s' }}>
-                  {w === 'MetaMask' ? '🦊' : w === 'Coinbase Wallet' ? '🔵' : w === 'WalletConnect' ? '🔗' : '🐰'} {w}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-
-        {step === 'connected' && (
-          <button onClick={verify} style={{ width: '100%', padding: '13px', borderRadius: 6, border: 'none', background: 'linear-gradient(135deg, #ffb800, #e09000)', color: '#020508', fontWeight: 800, fontSize: 12, fontFamily: 'Space Mono, monospace', letterSpacing: '0.08em', cursor: 'pointer', marginBottom: 14 }}>
-            🛡️ APPROVE $0.02 & VERIFY ONCHAIN →
-          </button>
-        )}
-
-        {step === 'done' && (
-          <button onClick={onClose} style={{ width: '100%', padding: '13px', borderRadius: 6, border: '1px solid rgba(0,229,160,0.3)', background: 'rgba(0,229,160,0.08)', color: '#00e5a0', fontWeight: 800, fontSize: 12, fontFamily: 'Space Mono, monospace', cursor: 'pointer', marginBottom: 14 }}>
-            ✓ DONE — CLOSE
-          </button>
-        )}
-
-        <p style={{ fontSize: 9, color: '#1a3040', fontFamily: 'Space Mono, monospace', textAlign: 'center' }}>Non-custodial · We never control your funds · All transactions in your wallet</p>
-      </div>
-      <style>{`@keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }`}</style>
-    </div>
-  )
-}
 
 export default function HomePage() {
   const [items, setItems] = useState<RadarItem[]>([])
