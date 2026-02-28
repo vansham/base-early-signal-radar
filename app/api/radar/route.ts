@@ -55,8 +55,8 @@ async function fetchRealPools(): Promise<RadarItem[]> {
 
       // Anomaly detection
       let anomalyType: AnomalyType = 'UNUSUAL_VOLUME'
-      if (ageMinutes < 10) anomalyType = 'NEW_POOL'
-      else if (ageMinutes < 60) anomalyType = 'NEW_TOKEN'
+      if (ageMinutes < 120) anomalyType = 'NEW_POOL'
+      else if (ageMinutes < 360) anomalyType = 'NEW_TOKEN'
       else if (Math.abs(priceChange1h) > 50) anomalyType = 'RAPID_MINT'
       else if (volume24h > liquidity * 2) anomalyType = 'WHALE_ENTRY'
       else if (liquidity > 500000) anomalyType = 'LIQUIDITY_SPIKE'
