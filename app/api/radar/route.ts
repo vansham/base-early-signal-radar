@@ -2,122 +2,107 @@ import { NextResponse } from 'next/server'
 import { calculateRiskScore, scoreToRiskLevel } from '@/lib/scoring'
 import { RadarItem, AnomalyType } from '@/lib/types'
 
-const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY!
 const BASESCAN_KEY = process.env.BASESCAN_API_KEY!
-const BASE_RPC = `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
 
-const KNOWN_DEXES: Record<string, string> = {
-  '0x33128a8fc17869897dce68ed026d694621f6fdfd': 'Uniswap V3',
-  '0x420dd381b31aef6683db6b902084cb0ffece40da': 'Aerodrome',
-  '0xfda619b6d20975be80a10332cd39b9a4b0faa8bb': 'BaseSwap',
-}
-
-async function rpc(method: string, params: unknown[]) {
-  const res = await fetch(BASE_RPC, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: 1, jsonrpc: '2.0', method, params }),
-  })
-  const json = await res.json()
-  return json.result
-}
-
-async function getNewPools(): Promise<RadarItem[]> {
+async function fetchRealPools(): Promise<RadarItem[]> {
   try {
-    // Uniswap V3 PoolCreated event topic
-    const POOL_CREATED = '0x783cca1c0412dd0d695e784568c96da2e9c22ff989357a2e8b1d9b2b4e6b7118'
-    const blockHex = await rpc('eth_blockNumber', [])
-    const currentBlock = parseInt(blockHex, 16)
-    const fromBlock = '0x' + (currentBlock - 1000).toString(16)
+    // DexScreener - real Base new pools, no API key needed!
+    const res = await fetch('https://api.dexscreener.com/token-profiles/latest/v1', {
+      headers: { 'User-Agent': 'BaseRadar/1.0' },
+      next: { revalidate: 30 }
+    })
+    const profiles = await res.json()
 
-    const logs = await rpc('eth_getLogs', [{
-      fromBlock,
-      toBlock: 'latest',
-      topics: [POOL_CREATED],
-    }])
+    // Also fetch latest pairs on Base
+    const pairsRes = await fetch('https://api.dexscreener.com/latest/dex/search?q=base+new', {
+      headers: { 'User-Agent': 'BaseRadar/1.0' },
+      next: { revalidate: 30 }
+    })
+    const pairsData = await pairsRes.json()
+    const pairs = pairsData.pairs?.filter((p: {chainId: string}) => p.chainId === 'base').slice(0, 12) || []
 
-    if (!logs || !Array.isArray(logs)) return []
+    if (pairs.length === 0) return []
 
-    const items: RadarItem[] = await Promise.all(
-      logs.slice(0, 8).map(async (log: { address: string; blockNumber: string; transactionHash: string; topics: string[]; data: string }, i: number) => {
-        const factory = log.address.toLowerCase()
-        const dex = KNOWN_DEXES[factory] || 'Unknown DEX'
-        const isKnownDeployer = !!KNOWN_DEXES[factory]
+    const items: RadarItem[] = pairs.map((pair: {
+      pairAddress: string
+      baseToken: { symbol: string; address: string; name: string }
+      quoteToken: { symbol: string; address: string }
+      liquidity?: { usd?: number }
+      volume?: { h24?: number }
+      pairCreatedAt?: number
+      dexId: string
+      txns?: { h24?: { buys?: number; sells?: number } }
+      priceChange?: { h1?: number }
+    }, i: number) => {
+      const liquidity = pair.liquidity?.usd || 0
+      const volume24h = pair.volume?.h24 || 0
+      const ageMinutes = pair.pairCreatedAt
+        ? Math.floor((Date.now() - pair.pairCreatedAt) / 60000)
+        : 60
+      const txCount = (pair.txns?.h24?.buys || 0) + (pair.txns?.h24?.sells || 0)
+      const priceChange1h = pair.priceChange?.h1 || 0
 
-        // Get block timestamp for age
-        const block = await rpc('eth_getBlockByNumber', [log.blockNumber, false])
-        const blockTime = parseInt(block?.timestamp || '0', 16)
-        const ageMinutes = Math.floor((Date.now() / 1000 - blockTime) / 60)
+      const dexMap: Record<string, string> = {
+        uniswapv3: 'Uniswap V3',
+        aerodrome: 'Aerodrome',
+        baseswap: 'BaseSwap',
+        sushiswap: 'SushiSwap',
+        curve: 'Curve',
+        swapbased: 'SwapBased',
+      }
+      const dex = dexMap[pair.dexId?.toLowerCase()] || pair.dexId || 'Unknown DEX'
+      const isKnownDex = !!dexMap[pair.dexId?.toLowerCase()]
 
-        // Get deployer from tx
-        const tx = await rpc('eth_getTransactionByHash', [log.transactionHash])
-        const deployer = tx?.from || '0x???'
+      // Anomaly detection
+      let anomalyType: AnomalyType = 'UNUSUAL_VOLUME'
+      if (ageMinutes < 10) anomalyType = 'NEW_POOL'
+      else if (ageMinutes < 60) anomalyType = 'NEW_TOKEN'
+      else if (Math.abs(priceChange1h) > 50) anomalyType = 'RAPID_MINT'
+      else if (volume24h > liquidity * 2) anomalyType = 'WHALE_ENTRY'
+      else if (liquidity > 500000) anomalyType = 'LIQUIDITY_SPIKE'
 
-        // Try get liquidity from Basescan
-        let liquidity = Math.random() * 50000 + 5000
-        let volume24h = liquidity * (Math.random() * 3 + 0.5)
-
-        try {
-          const tokenRes = await fetch(
-            `https://api.basescan.org/api?module=account&action=tokentx&address=${log.address}&sort=desc&apikey=${BASESCAN_KEY}`
-          )
-          const tokenData = await tokenRes.json()
-          if (tokenData.result && Array.isArray(tokenData.result)) {
-            volume24h = tokenData.result.length * 1000
-          }
-        } catch {}
-
-        // Decode token addresses from log data
-        const token0 = '0x' + log.topics[1]?.slice(26) || 'TOKEN0'
-        const token1 = '0x' + log.topics[2]?.slice(26) || 'TOKEN1'
-
-        const anomalyTypes: AnomalyType[] = ['NEW_POOL', 'NEW_TOKEN', 'LIQUIDITY_SPIKE', 'UNUSUAL_VOLUME', 'WHALE_ENTRY', 'RAPID_MINT']
-        const anomalyType: AnomalyType = ageMinutes < 5 ? 'NEW_POOL' : anomalyTypes[i % anomalyTypes.length]
-
-        const priceChange1h = (Math.random() - 0.3) * 100
-
-        const score = calculateRiskScore({
-          liquidity, ageMinutes, dex,
-          isKnownDeployer,
-          contractVerified: isKnownDeployer,
-          txCount: Math.floor(Math.random() * 500),
-          priceChange1h,
-        })
-
-        return {
-          id: log.transactionHash.slice(0, 10) + i,
-          pair: `${token0.slice(0, 6)}/${token1.slice(0, 6)}`,
-          token0: token0.slice(0, 8),
-          token1: token1.slice(0, 8),
-          liquidity,
-          volume24h,
-          ageMinutes,
-          dex,
-          deployer: deployer.slice(0, 8) + '...' + deployer.slice(-4),
-          isKnownDeployer,
-          anomalyType,
-          riskScore: score,
-          riskLevel: scoreToRiskLevel(score),
-          txCount: Math.floor(Math.random() * 500),
-          priceChange1h,
-          contractVerified: isKnownDeployer,
-          timestamp: blockTime * 1000,
-        }
+      const score = calculateRiskScore({
+        liquidity,
+        ageMinutes,
+        dex,
+        isKnownDeployer: isKnownDex,
+        contractVerified: isKnownDex,
+        txCount,
+        priceChange1h,
       })
-    )
+
+      return {
+        id: pair.pairAddress || String(i),
+        pair: `${pair.baseToken.symbol}/${pair.quoteToken.symbol}`,
+        token0: pair.baseToken.symbol,
+        token1: pair.quoteToken.symbol,
+        liquidity,
+        volume24h,
+        ageMinutes,
+        dex,
+        deployer: pair.pairAddress,
+        isKnownDeployer: isKnownDex,
+        anomalyType,
+        riskScore: score,
+        riskLevel: scoreToRiskLevel(score),
+        txCount,
+        priceChange1h,
+        contractVerified: isKnownDex,
+        timestamp: pair.pairCreatedAt || Date.now(),
+      } as RadarItem
+    })
 
     return items.sort((a, b) => a.riskScore - b.riskScore)
   } catch (err) {
-    console.error('[Real Radar Error]', err)
+    console.error('[DexScreener Error]', err)
     return []
   }
 }
 
 export async function GET() {
   try {
-    const items = await getNewPools()
+    const items = await fetchRealPools()
 
-    // Fallback to mock if real data fails
     if (items.length === 0) {
       const { detectAnomalies } = await import('@/lib/anomaly')
       const mock = detectAnomalies()
