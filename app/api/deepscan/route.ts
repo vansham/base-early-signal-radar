@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     results.tokenTxCount = tokenTxs.length
     const senders = new Set(tokenTxs.map((t: {from: string}) => t.from.toLowerCase()))
     const receivers = new Set(tokenTxs.map((t: {to: string}) => t.to.toLowerCase()))
-    const circular = [...senders].filter(s => receivers.has(s)).length
+    const circular = Array.from(senders).filter((s: unknown) => receivers.has(s as string)).length
     if (circular > 5) flags.push('Possible wash trading (' + circular + ' circular addresses)')
 
     const balance = await rpc('eth_getBalance', [contractAddress, 'latest'])
