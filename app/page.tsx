@@ -1,3 +1,4 @@
+import ProofModal from "@/components/ProofModal"
 'use client'
 import { useState, useEffect, useMemo } from 'react'
 import { RadarItem } from '@/lib/types'
@@ -124,7 +125,7 @@ function Card({ item, onProof }: { item: RadarItem; onProof: (item: RadarItem) =
   )
 }
 
-function ProofModal({ item, onClose }: { item: RadarItem; onClose: () => void }) {
+// ProofModal moved to component({ item, onClose }: { item: RadarItem; onClose: () => void }) {
   const [step, setStep] = useState<ProofStep>('idle')
   const [wallet, setWallet] = useState('')
 
