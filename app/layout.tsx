@@ -9,7 +9,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        <meta name="base:app_id" content="69a33edcbe742ec8a785b505" />
+        <meta name="base:app_id" content="699d53234fa7a77f84a9ffe6" />
       </head>
       <body style={{ margin: 0, padding: 0, background: '#020508' }}>
         {children}
